@@ -5,7 +5,7 @@ from skimage.io import imread
 
 
 # download the image
-img_url = 'bushi_hyousi.png'
+img_url = 'https://raw.githubusercontent.com/Yanmegakk/show_img_hist_kk/main/bushi_hyousi.png'
 
 im = imread(img_url)
 
