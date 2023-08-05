@@ -1,38 +1,24 @@
-import numpy as np
-import pandas as pd
 import streamlit as st
-from skimage.io import imread
+from PIL import Image
 
+def enhance_image(image, scale_factor=2):
+    width, height = image.size
+    new_width = width * scale_factor
+    new_height = height * scale_factor
+    return image.resize((new_width, new_height), Image.LANCZOS)
 
-# download the image
-img_url = 'https://raw.githubusercontent.com/Yanmegakk/show_img_hist_kk/main/bushi_hyousi.png'
+def main():
+    st.title("Image Enhancer")
+    uploaded_image = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
-im = imread(img_url)
+    if uploaded_image is not None:
+        st.image(uploaded_image, caption="Uploaded Image", use_column_width=True)
 
-st.image(im, caption='Nitmic Bushi hyousi',
-         use_column_width=True)
+        image = Image.open(uploaded_image)
+        enhanced_image = enhance_image(image)
 
+        st.subheader("Enhanced Image")
+        st.image(enhanced_image, caption="Enhanced Image", use_column_width=True)
 
-# show histgram of all colors
-hist_red, _ = np.histogram(im[:, :, 0], bins=64)
-hist_green, _ = np.histogram(im[:, :, 1], bins=64)
-hist_blue, _ = np.histogram(im[:, :, 2], bins=64)
-hist = np.stack((hist_red, hist_green, hist_blue), axis=1)
-
-df_hist = pd.DataFrame(hist, columns=['R', 'G', 'B'])
-st.bar_chart(df_hist)
-
-
-# choose one color
-color = st.radio(
-    "choose R, G, or B",
-    ('R', 'G', 'B'))
-if color == 'R':
-    df_hist = pd.DataFrame(hist_red)
-    st.bar_chart(df_hist)
-if color == 'G':
-    df_hist = pd.DataFrame(hist_green)
-    st.bar_chart(df_hist)
-if color == 'B':
-    df_hist = pd.DataFrame(hist_blue)
-    st.bar_chart(df_hist)
+if __name__ == "__main__":
+    main()
