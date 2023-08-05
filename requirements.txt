@@ -3,6 +3,6 @@ streamlit
 numpy
 scikit_image
 typing_extensions
-torch==1.7.1
-torchvision==0.8.2
+torch
+torchvision
 
