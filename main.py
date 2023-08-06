@@ -1,75 +1,59 @@
 import streamlit as st
-import numpy as np
-from PIL import Image, ImageEnhance, ImageOps
-import torchvision.transforms as transforms
 import torch
-import requests
+from PIL import Image, ImageEnhance, ImageOps
+from torchvision.transforms import functional as F
+from PIL import Image
+import numpy as np
 
-# ページのタイトルやアイコンを設定
-st.set_page_config(page_title="Cool Image Editor", page_icon=":art:", layout="wide")
-
-# ESRGANのモデルをダウンロード
-model_url = "https://github.com/xinntao/ESRGAN/releases/download/v0.4.1/ESRGAN_x4.pth"
-model_path = "ESRGAN_x4.pth"
-if not st.session_state.model_downloaded:
-    st.session_state.model_downloaded = True
-    response = requests.get(model_url)
-    with open(model_path, "wb") as f:
-        f.write(response.content)
-
+# Load the RealESRGAN model
+model_path = 'realesrgan-x4minus.pth'  # Replace with your actual path
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = torch.load(model_path, map_location=device).to(device)
-model.eval()
+model = torch.load(model_path, map_location=device)["model"].to(device).eval()
 
-def enhance_image_esrgan(image, scale_factor=4):
-    transform = transforms.Compose([
-        transforms.Resize((image.size[1] * scale_factor, image.size[0] * scale_factor)),
-        transforms.ToTensor()
-    ])
-    image_tensor = transform(image).unsqueeze(0).to(device)
+# Function to enhance image using RealESRGAN
+def enhance_with_realesrgan(image, scale=4):
     with torch.no_grad():
-        enhanced_tensor = model(image_tensor).clamp(0.0, 1.0)
-    enhanced_image = transforms.ToPILImage()(enhanced_tensor.cpu().squeeze())
-    return enhanced_image
+        lr_img = F.to_tensor(image).unsqueeze(0).to(device)
+        sr_img = model(lr_img).squeeze(0)
+        sr_img = F.to_pil_image(sr_img.cpu())
+    return sr_img
 
-def adjust_contrast(image, factor=1.5):
+# Function to apply contrast adjustment
+def adjust_contrast(image, factor):
     enhancer = ImageEnhance.Contrast(image)
     return enhancer.enhance(factor)
 
+# Function to apply color inversion
 def invert_colors(image):
-    return ImageOps.invert(image)
+    return Image.fromarray(np.array(image)[:, :, ::-1])
 
 def main():
-    st.title("Cool Image Editor")
+    st.set_page_config(page_title="画像処理アプリ", page_icon="📷", layout="wide")
+    st.title("画像処理アプリ")
 
     uploaded_image = st.file_uploader("画像をアップロードしてください", type=["jpg", "jpeg", "png"])
-
     if uploaded_image is not None:
         image = Image.open(uploaded_image)
+        st.subheader("元の画像")
+        st.image(image, caption="元の画像", use_column_width=True)
 
-        st.subheader("変換前と変換後")
+        operation = st.selectbox("処理を選択してください", ["高画質化", "コントラスト調整", "色反転化"])
+        
+        if operation == "高画質化":
+            enhanced_image = enhance_with_realesrgan(image)
+        elif operation == "コントラスト調整":
+            contrast_factor = st.slider("コントラスト調整", 0.1, 3.0, 1.0, 0.1)
+            enhanced_image = adjust_contrast(image, contrast_factor)
+        else:
+            enhanced_image = invert_colors(image)
 
+        st.subheader("処理後の画像")
+        st.image(enhanced_image, caption="処理後の画像", use_column_width=True)
+
+        st.subheader("比較")
         col1, col2 = st.beta_columns(2)
-
-        with col1:
-            st.image(image, caption="変換前", use_column_width=True)
-
-        with col2:
-            st.sidebar.subheader("エフェクトを選択")
-            selected_effects = st.sidebar.multiselect("エフェクトを選んでください", ["高画質化", "コントラスト調整", "色反転"])
-
-            if "高画質化" in selected_effects:
-                enhanced_image = enhance_image_esrgan(image)
-                st.image(enhanced_image, caption="高画質化", use_column_width=True)
-
-            if "コントラスト調整" in selected_effects:
-                contrast_factor = st.sidebar.slider("コントラストの強度を調整", 0.5, 5.0, 1.5)
-                contrast_adjusted_image = adjust_contrast(image, contrast_factor)
-                st.image(contrast_adjusted_image, caption="コントラスト調整", use_column_width=True)
-
-            if "色反転" in selected_effects:
-                inverted_image = invert_colors(image)
-                st.image(inverted_image, caption="色反転", use_column_width=True)
+        col1.image(image, caption="元の画像", use_column_width=True)
+        col2.image(enhanced_image, caption="処理後の画像", use_column_width=True)
 
 if __name__ == "__main__":
     main()
