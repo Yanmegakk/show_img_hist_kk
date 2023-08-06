@@ -78,7 +78,7 @@ def main():
             control_points[128] = st.sidebar.slider("中間トーン (128)", 0, 255, 128)
             enhanced_image = adjust_tone_curve(Image.open(uploaded_image), control_points)
 
-        col1, col2 = st.beta_columns(2)
+        col1, col2 = st.columns(2)
         col1.subheader("変更前")
         col1.image(Image.open(uploaded_image), caption="変更前", use_column_width=True)
 
