@@ -66,6 +66,23 @@ def main():
 
         st.image(edited_image, caption="編集後の画像", use_column_width=True)
 
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("元画像")
+            st.image(original_image, use_column_width=True)
+
+        with col2:
+            st.subheader("編集後の画像")
+            st.image(edited_image, use_column_width=True)
+
+        # クリックした箇所の色のカラーコードを取得
+        if st.button("クリックした箇所の色を取得"):
+            clicked_point = st.experimental_get_query_params().get('clicked_point', [(0, 0)])
+            x, y = clicked_point[0]
+            color = edited_image.getpixel((int(x), int(y)))
+            st.write(f"クリックした箇所の色: RGB {color}")
+
 if __name__ == "__main__":
     main()
 
