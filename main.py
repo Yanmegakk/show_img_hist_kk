@@ -1,27 +1,29 @@
 import streamlit as st
+from PIL import Image, ImageEnhance, ImageOps
 import numpy as np
-from PIL import Image, ImageEnhance, ImageOps, ImageFilter
+import matplotlib.pyplot as plt
+import cv2
 
-def enhance_image(image, scale_factor):
-    width, height = image.size
-    new_width = int(width * scale_factor)
-    new_height = int(height * scale_factor)
-    return image.resize((new_width, new_height), Image.LANCZOS)
+# 高画質化
+def enhance_image(image):
+    return image.resize((image.width * 2, image.height * 2), Image.LANCZOS)
 
+# コントラスト調整
 def adjust_contrast(image, factor):
     enhancer = ImageEnhance.Contrast(image)
     return enhancer.enhance(factor)
 
+# 色反転化
 def invert_colors(image):
     return ImageOps.invert(image)
 
-def adjust_hsv(image, hue, saturation, value):
-    hsv_image = image.convert("HSV")
-    h, s, v = hsv_image.split()
-    h = h.point(lambda p: p + hue)
-    s = s.point(lambda p: p * saturation)
-    v = v.point(lambda p: p * value)
-    return Image.merge("HSV", (h, s, v)).convert("RGB")
+# HSVパラメータの調節
+def adjust_hsv(image, h_factor, s_factor, v_factor):
+    hsv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2HSV)
+    hsv_image[:, :, 0] = np.clip(hsv_image[:, :, 0] * h_factor, 0, 255)
+    hsv_image[:, :, 1] = np.clip(hsv_image[:, :, 1] * s_factor, 0, 255)
+    hsv_image[:, :, 2] = np.clip(hsv_image[:, :, 2] * v_factor, 0, 255)
+    return Image.fromarray(cv2.cvtColor(hsv_image, cv2.COLOR_HSV2RGB))
 
 def main():
     st.set_page_config(page_title="画像処理アプリVer.kk", page_icon="🖼️")
@@ -30,38 +32,29 @@ def main():
     uploaded_image = st.file_uploader("画像をアップロードしてください", type=["jpg", "jpeg", "png"])
 
     if uploaded_image is not None:
-        st.subheader("元の画像")
-        st.image(uploaded_image, caption="元の画像", use_column_width=True)
-
         image = Image.open(uploaded_image)
 
-        # 高画質化
-        enhance_factor = st.slider("高画質化", 1.0, 4.0, 2.0, 0.1)
-        enhanced_image = enhance_image(image, enhance_factor)
+        st.sidebar.header("エフェクト選択")
+        effect = st.sidebar.radio("エフェクトを選んでください", ("高画質化", "コントラスト調整", "色反転化", "HSVパラメータ調整"))
 
-        # コントラスト調整
-        contrast_factor = st.slider("コントラスト調整", 0.5, 2.0, 1.0, 0.1)
-        contrast_adjusted = adjust_contrast(image, contrast_factor)
+        st.subheader("元画像")
+        st.image(image, caption="元画像", use_column_width=True)
 
-        # 色反転化
-        inverted_image = invert_colors(image)
+        st.subheader("変更後の画像")
+        if effect == "高画質化":
+            new_image = enhance_image(image)
+        elif effect == "コントラスト調整":
+            contrast_factor = st.sidebar.slider("コントラスト調整", 0.5, 2.0, 1.0)
+            new_image = adjust_contrast(image, contrast_factor)
+        elif effect == "色反転化":
+            new_image = invert_colors(image)
+        else:
+            h_factor = st.sidebar.slider("Hue", 0.0, 2.0, 1.0)
+            s_factor = st.sidebar.slider("Saturation", 0.0, 2.0, 1.0)
+            v_factor = st.sidebar.slider("Value", 0.0, 2.0, 1.0)
+            new_image = adjust_hsv(image, h_factor, s_factor, v_factor)
 
-        # HSVパラメータ調節
-        hue = st.slider("色相調整", -255, 255, 0, 1)
-        saturation = st.slider("彩度調整", 0.0, 2.0, 1.0, 0.1)
-        value = st.slider("明度調整", 0.0, 2.0, 1.0, 0.1)
-        hsv_adjusted = adjust_hsv(image, hue, saturation, value)
-
-        st.subheader("変換後の画像")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.image(enhanced_image, caption="高画質化", use_column_width=True)
-            st.image(contrast_adjusted, caption="コントラスト調整", use_column_width=True)
-        
-        with col2:
-            st.image(inverted_image, caption="色反転化", use_column_width=True)
-            st.image(hsv_adjusted, caption="HSVパラメータ調節", use_column_width=True)
+        st.image([image, new_image], caption=["元画像", "変更後の画像"], use_column_width=True)
 
 if __name__ == "__main__":
     main()
