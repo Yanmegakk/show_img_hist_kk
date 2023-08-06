@@ -21,7 +21,7 @@ def invert_colors(image):
 
 def create_tone_curve(points):
     x = np.arange(256)
-    curve = np.interp(x, *zip(*sorted(points)))
+    curve = np.interp(x, *zip(*sorted(points.items())))
     return curve.astype(int)
 
 def plot_tone_curve(curve_points):
@@ -64,13 +64,15 @@ def main():
             r_curve = st.sidebar.slider("Rトーンカーブ", 0, 255, (0, 255))
             g_curve = st.sidebar.slider("Gトーンカーブ", 0, 255, (0, 255))
             b_curve = st.sidebar.slider("Bトーンカーブ", 0, 255, (0, 255))
-            curve_points = [create_tone_curve(r_curve),
-                            create_tone_curve(g_curve),
-                            create_tone_curve(b_curve)]
+            curve_points = {
+                "r": create_tone_curve({"r": r_curve}),
+                "g": create_tone_curve({"g": g_curve}),
+                "b": create_tone_curve({"b": b_curve})
+            }
             processed_image = options[selected_option](image, curve_points)
             
             st.subheader("トーンカーブの状態")
-            st.pyplot(plot_tone_curve(curve_points))
+            st.pyplot(plot_tone_curve([curve_points["r"], curve_points["g"], curve_points["b"]]))
         else:
             processed_image = options[selected_option](image)
 
