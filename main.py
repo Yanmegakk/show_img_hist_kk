@@ -33,7 +33,8 @@ def plot_color_palette(palette):
 
 
 def main():
-    st.title("画像エディタ")
+    st.set_page_config(page_title="画像エディタVer.kk", page_icon="🎨")
+    st.title("画像エディタVer.kk")
 
     uploaded_image = st.file_uploader("画像を選択してください", type=["jpg", "jpeg", "png"])
 
@@ -47,16 +48,35 @@ def main():
         effects = ["高画質化", "コントラスト調整", "色反転化", "HSVパラメータの調節"]
         selected_effects = st.sidebar.multiselect("適用するエフェクトを選択", effects)
 
+        # HSVパラメータの初期値
+        h_factor = 1.0
+        s_factor = 1.0
+        v_factor = 1.0
+
         enhanced_image = image.copy()
+        reset_hsv = False  # HSVパラメータのリセットフラグ
         for effect in selected_effects:
             if effect == "高画質化":
                 enhanced_image = enhance_image(enhanced_image)
-            # ... 以前のエフェクトはそのまま ...
+            elif effect == "コントラスト調整":
+                contrast_factor = st.sidebar.slider("コントラスト調整", 0.1, 3.0, 1.0)
+                enhanced_image = adjust_contrast(enhanced_image, contrast_factor)
+            elif effect == "色反転化":
+                enhanced_image = invert_colors(enhanced_image)
+            elif effect == "HSVパラメータの調節":
+                h_factor = st.sidebar.slider("Hue", 0.0, 2.0, h_factor)
+                s_factor = st.sidebar.slider("Saturation", 0.0, 2.0, s_factor)
+                v_factor = st.sidebar.slider("Value", 0.0, 2.0, v_factor)
+                enhanced_image = adjust_hsv(enhanced_image, h_factor, s_factor, v_factor)
 
         st.subheader("変更後の画像")
         st.image(enhanced_image, caption="変更後の画像", use_column_width=True)
 
-        st.sidebar.header("カラーパレット")
+        if "HSVパラメータの調節" in selected_effects:
+            if st.sidebar.button("リセット"):
+                h_factor = 1.0
+                s_factor = 1.0
+                v_factor = 1.0
         # BytesIOを使用して画像を一時的に保存
         img_io = io.BytesIO()
         enhanced_image.save(img_io, format='PNG')
