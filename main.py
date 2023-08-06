@@ -26,10 +26,11 @@ def adjust_hsv(image, h_factor, s_factor, v_factor):
     return Image.merge("HSV", (h, s, v)).convert("RGB")
 
 def plot_color_palette(palette):
-    plt.figure(figsize=(2, 2))
-    plt.imshow([np.array(palette)], aspect='auto')
-    plt.axis('off')
-    st.pyplot()
+    fig, ax = plt.subplots(figsize=(2, 2))
+    ax.imshow([np.array(palette)], aspect='auto')
+    ax.axis('off')
+    st.pyplot(fig)
+
 
 def main():
     st.title("画像エディタ")
