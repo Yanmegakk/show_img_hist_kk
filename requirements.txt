@@ -4,5 +4,4 @@ numpy
 scikit_image
 typing_extensions
 matplotlib
-colorthief
 

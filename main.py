@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
 from PIL import Image, ImageEnhance, ImageOps, ImageFilter, ImageChops
-from colorthief import ColorThief
+import colorsys
 
 # 日本語UI設定
 st.set_page_config(page_title="画像編集アプリ", page_icon=":camera:", layout="wide")
@@ -33,6 +33,16 @@ def adjust_hsv(image, hue_factor=1.0, saturation_factor=1.0, value_factor=1.0):
     v = Image.fromarray(v.astype("uint8"), "L")
     return Image.merge("HSV", (h, s, v)).convert("RGB")
 
+def create_color_palette(image):
+    colors = []
+    width, height = image.size
+    for y in range(height):
+        for x in range(width):
+            pixel_color = image.getpixel((x, y))
+            hsv = colorsys.rgb_to_hsv(pixel_color[0] / 255, pixel_color[1] / 255, pixel_color[2] / 255)
+            colors.append(hsv)
+    return colors
+
 def main():
     st.title("画像編集アプリ")
 
@@ -40,34 +50,44 @@ def main():
 
     if uploaded_image is not None:
         st.sidebar.title("編集オプション")
-        # ... 他の編集オプション ...
+        enhance = st.sidebar.checkbox("高画質化")
+        contrast = st.sidebar.slider("コントラスト調整", 0.5, 2.0, 1.0, step=0.1)
+        invert = st.sidebar.checkbox("色反転化")
+        hue = st.sidebar.slider("Hue", 0.0, 2.0, 1.0, step=0.01)
+        saturation = st.sidebar.slider("Saturation", 0.0, 2.0, 1.0, step=0.01)
+        value = st.sidebar.slider("Value", 0.0, 2.0, 1.0, step=0.01)
+        reset = st.sidebar.button("リセット")
 
         original_image = Image.open(uploaded_image)
 
-        # 元画像と変更後の画像を横並びで表示
-        col1, col2 = st.columns(2)
-        with col1:
-            st.image(original_image, caption="元画像", use_column_width=True)
+        st.image(original_image, caption="元画像", use_column_width=True)
 
         edited_image = original_image.copy()
 
-        # 画像編集処理
+        if enhance:
+            edited_image = enhance_image(edited_image)
 
-        with col2:
-            st.image(edited_image, caption="編集後の画像", use_column_width=True)
+        if contrast != 1.0:
+            edited_image = adjust_contrast(edited_image, contrast)
 
-            # 変更後の画像からカラーパレットを生成
-            color_thief = ColorThief(edited_image)
-            dominant_color = color_thief.get_color(quality=1)
-            palette = color_thief.get_palette(color_count=5)
+        if invert:
+            edited_image = invert_colors(edited_image)
 
-            # カラーパレットを表示
-            st.subheader("カラーパレット")
-            palette_html = ""
-            for color in palette:
-                palette_html += f'<div style="width: 30px; height: 30px; background-color: rgb({color[0]}, {color[1]}, {color[2]})"></div>'
-            st.markdown(palette_html, unsafe_allow_html=True)
+        if hue != 1.0 or saturation != 1.0 or value != 1.0:
+            edited_image = adjust_hsv(edited_image, hue, saturation, value)
+
+        st.image(edited_image, caption="編集後の画像", use_column_width=True)
+
+        if reset:
+            edited_image = original_image.copy()
+
+        st.sidebar.subheader("カラーパレット")
+        colors = create_color_palette(edited_image)
+        palette_img = Image.new("RGB", (len(colors), 50))
+        for i, hsv in enumerate(colors):
+            rgb_color = colorsys.hsv_to_rgb(hsv[0], hsv[1], hsv[2])
+            palette_img.putpixel((i, 25), tuple(int(c * 255) for c in rgb_color))
+        st.sidebar.image(palette_img, caption="Color Palette", use_column_width=True)
 
 if __name__ == "__main__":
     main()
-
