@@ -19,14 +19,10 @@ def adjust_contrast(image, factor=1.5):
 def invert_colors(image):
     return ImageOps.invert(image)
 
-# トーンカーブ
-def apply_tone_curve(image, curve_points):
-    r_curve, g_curve, b_curve = curve_points
-    r, g, b = image.split()
-    r = Image.eval(r, lambda x: int(np.interp(x, range(256), r_curve)))
-    g = Image.eval(g, lambda x: int(np.interp(x, range(256), g_curve)))
-    b = Image.eval(b, lambda x: int(np.interp(x, range(256), b_curve)))
-    return Image.merge("RGB", (r, g, b))
+def create_tone_curve(points):
+    x = np.arange(256)
+    curve = np.interp(x, *zip(*sorted(points)))
+    return curve.astype(int)
 
 def plot_tone_curve(curve_points):
     r_curve, g_curve, b_curve = curve_points
@@ -42,7 +38,7 @@ def plot_tone_curve(curve_points):
     return plt
 
 def main():
-    st.set_page_config(page_title="画像処理アプリVer.kk", page_icon="🎨")
+    st.set_page_config(page_title="画像処理アプリ", page_icon="🎨")
 
     st.title("画像処理アプリ")
 
@@ -59,7 +55,7 @@ def main():
             "高画質化": enhance_image,
             "コントラスト調整": adjust_contrast,
             "色反転化": invert_colors,
-            "トーンカーブ": apply_tone_curve,
+            "トーンカーブ": create_tone_curve,
         }
         selected_option = st.sidebar.selectbox("処理を選択してください", list(options.keys()))
 
@@ -68,7 +64,9 @@ def main():
             r_curve = st.sidebar.slider("Rトーンカーブ", 0, 255, (0, 255))
             g_curve = st.sidebar.slider("Gトーンカーブ", 0, 255, (0, 255))
             b_curve = st.sidebar.slider("Bトーンカーブ", 0, 255, (0, 255))
-            curve_points = [r_curve, g_curve, b_curve]
+            curve_points = [create_tone_curve(r_curve),
+                            create_tone_curve(g_curve),
+                            create_tone_curve(b_curve)]
             processed_image = options[selected_option](image, curve_points)
             
             st.subheader("トーンカーブの状態")
