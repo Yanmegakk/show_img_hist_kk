@@ -20,8 +20,13 @@ def invert_colors(image):
 
 # トーンカーブの調整
 def adjust_tone_curve(image, control_points):
-    curve = ImageEnhance.Color(image).enhance(0).point(control_points)
-    return Image.blend(image, curve, alpha=0.5)
+    lut = []
+    for i in range(256):
+        if i in control_points:
+            lut.extend(control_points[i])
+        else:
+            lut.extend([i])
+    return image.point(lut)
 
 def main():
     st.set_page_config(page_title="画像処理アプリVer.kk", page_icon="🎨", layout="wide")
