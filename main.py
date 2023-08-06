@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 from PIL import Image, ImageEnhance, ImageOps, ImageFilter, ImageChops
+from colorthief import ColorThief
 
 # 日本語UI設定
 st.set_page_config(page_title="画像編集アプリ", page_icon=":camera:", layout="wide")
@@ -39,49 +40,33 @@ def main():
 
     if uploaded_image is not None:
         st.sidebar.title("編集オプション")
-        enhance = st.sidebar.checkbox("高画質化")
-        contrast = st.sidebar.slider("コントラスト調整", 0.5, 2.0, 1.0, step=0.1)
-        invert = st.sidebar.checkbox("色反転化")
-        hue = st.sidebar.slider("Hue", 0.0, 2.0, 1.0, step=0.01)
-        saturation = st.sidebar.slider("Saturation", 0.0, 2.0, 1.0, step=0.01)
-        value = st.sidebar.slider("Value", 0.0, 2.0, 1.0, step=0.01)
+        # ... 他の編集オプション ...
 
         original_image = Image.open(uploaded_image)
 
-        st.image(original_image, caption="元画像", use_column_width=True)
+        # 元画像と変更後の画像を横並びで表示
+        col1, col2 = st.columns(2)
+        with col1:
+            st.image(original_image, caption="元画像", use_column_width=True)
 
         edited_image = original_image.copy()
 
-        if enhance:
-            edited_image = enhance_image(edited_image)
-
-        if contrast != 1.0:
-            edited_image = adjust_contrast(edited_image, contrast)
-
-        if invert:
-            edited_image = invert_colors(edited_image)
-
-        if hue != 1.0 or saturation != 1.0 or value != 1.0:
-            edited_image = adjust_hsv(edited_image, hue, saturation, value)
-
-        st.image(edited_image, caption="編集後の画像", use_column_width=True)
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.subheader("元画像")
-            st.image(original_image, use_column_width=True)
+        # 画像編集処理
 
         with col2:
-            st.subheader("編集後の画像")
-            st.image(edited_image, use_column_width=True)
+            st.image(edited_image, caption="編集後の画像", use_column_width=True)
 
-        # クリックした箇所の色のカラーコードを取得
-        if st.button("クリックした箇所の色を取得"):
-            clicked_point = st.experimental_get_query_params().get('clicked_point', [(0, 0)])
-            x, y = clicked_point[0]
-            color = edited_image.getpixel((int(x), int(y)))
-            st.write(f"クリックした箇所の色: RGB {color}")
+            # 変更後の画像からカラーパレットを生成
+            color_thief = ColorThief(edited_image)
+            dominant_color = color_thief.get_color(quality=1)
+            palette = color_thief.get_palette(color_count=5)
+
+            # カラーパレットを表示
+            st.subheader("カラーパレット")
+            palette_html = ""
+            for color in palette:
+                palette_html += f'<div style="width: 30px; height: 30px; background-color: rgb({color[0]}, {color[1]}, {color[2]})"></div>'
+            st.markdown(palette_html, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
