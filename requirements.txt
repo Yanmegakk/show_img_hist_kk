@@ -3,7 +3,5 @@ streamlit
 numpy
 scikit_image
 typing_extensions
-torch
-torchvision
 matplotlib
 
