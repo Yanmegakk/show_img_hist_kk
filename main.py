@@ -1,60 +1,71 @@
 import streamlit as st
-from PIL import Image, ImageEnhance, ImageOps
 import numpy as np
-import matplotlib.pyplot as plt
-import cv2
+from PIL import Image, ImageEnhance, ImageOps, ImageFilter, ImageChops
 
-# 高画質化
-def enhance_image(image):
-    return image.resize((image.width * 2, image.height * 2), Image.LANCZOS)
+# 日本語UI設定
+st.set_page_config(page_title="画像編集アプリ", page_icon=":camera:", layout="wide")
 
-# コントラスト調整
-def adjust_contrast(image, factor):
+def enhance_image(image, scale_factor=2):
+    width, height = image.size
+    new_width = width * scale_factor
+    new_height = height * scale_factor
+    return image.resize((new_width, new_height), Image.LANCZOS)
+
+def adjust_contrast(image, factor=1.5):
     enhancer = ImageEnhance.Contrast(image)
     return enhancer.enhance(factor)
 
-# 色反転化
 def invert_colors(image):
-    return ImageOps.invert(image)
+    return ImageChops.invert(image)
 
-# HSVパラメータの調節
-def adjust_hsv(image, h_factor, s_factor, v_factor):
-    hsv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2HSV)
-    hsv_image[:, :, 0] = np.clip(hsv_image[:, :, 0] * h_factor, 0, 255)
-    hsv_image[:, :, 1] = np.clip(hsv_image[:, :, 1] * s_factor, 0, 255)
-    hsv_image[:, :, 2] = np.clip(hsv_image[:, :, 2] * v_factor, 0, 255)
-    return Image.fromarray(cv2.cvtColor(hsv_image, cv2.COLOR_HSV2RGB))
+def adjust_hsv(image, hue_factor=1.0, saturation_factor=1.0, value_factor=1.0):
+    hsv_image = image.convert("HSV")
+    h, s, v = hsv_image.split()
+    h = np.array(h)
+    s = np.array(s)
+    v = np.array(v)
+    h = (h * hue_factor) % 256
+    s = np.clip(s * saturation_factor, 0, 255)
+    v = np.clip(v * value_factor, 0, 255)
+    h = Image.fromarray(h.astype("uint8"), "L")
+    s = Image.fromarray(s.astype("uint8"), "L")
+    v = Image.fromarray(v.astype("uint8"), "L")
+    return Image.merge("HSV", (h, s, v)).convert("RGB")
 
 def main():
-    st.set_page_config(page_title="画像処理アプリVer.kk", page_icon="🖼️")
-    st.title("画像処理アプリVer.kk")
+    st.title("画像編集アプリ")
 
     uploaded_image = st.file_uploader("画像をアップロードしてください", type=["jpg", "jpeg", "png"])
 
     if uploaded_image is not None:
-        image = Image.open(uploaded_image)
+        st.sidebar.title("編集オプション")
+        enhance = st.sidebar.checkbox("高画質化")
+        contrast = st.sidebar.slider("コントラスト調整", 0.5, 2.0, 1.0, step=0.1)
+        invert = st.sidebar.checkbox("色反転化")
+        hue = st.sidebar.slider("Hue", 0.0, 2.0, 1.0, step=0.01)
+        saturation = st.sidebar.slider("Saturation", 0.0, 2.0, 1.0, step=0.01)
+        value = st.sidebar.slider("Value", 0.0, 2.0, 1.0, step=0.01)
 
-        st.sidebar.header("エフェクト選択")
-        effect = st.sidebar.radio("エフェクトを選んでください", ("高画質化", "コントラスト調整", "色反転化", "HSVパラメータ調整"))
+        original_image = Image.open(uploaded_image)
 
-        st.subheader("元画像")
-        st.image(image, caption="元画像", use_column_width=True)
+        st.image(original_image, caption="元画像", use_column_width=True)
 
-        st.subheader("変更後の画像")
-        if effect == "高画質化":
-            new_image = enhance_image(image)
-        elif effect == "コントラスト調整":
-            contrast_factor = st.sidebar.slider("コントラスト調整", 0.5, 2.0, 1.0)
-            new_image = adjust_contrast(image, contrast_factor)
-        elif effect == "色反転化":
-            new_image = invert_colors(image)
-        else:
-            h_factor = st.sidebar.slider("Hue", 0.0, 2.0, 1.0)
-            s_factor = st.sidebar.slider("Saturation", 0.0, 2.0, 1.0)
-            v_factor = st.sidebar.slider("Value", 0.0, 2.0, 1.0)
-            new_image = adjust_hsv(image, h_factor, s_factor, v_factor)
+        edited_image = original_image.copy()
 
-        st.image([image, new_image], caption=["元画像", "変更後の画像"], use_column_width=True)
+        if enhance:
+            edited_image = enhance_image(edited_image)
+
+        if contrast != 1.0:
+            edited_image = adjust_contrast(edited_image, contrast)
+
+        if invert:
+            edited_image = invert_colors(edited_image)
+
+        if hue != 1.0 or saturation != 1.0 or value != 1.0:
+            edited_image = adjust_hsv(edited_image, hue, saturation, value)
+
+        st.image(edited_image, caption="編集後の画像", use_column_width=True)
 
 if __name__ == "__main__":
     main()
+
